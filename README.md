@@ -7,7 +7,7 @@ A Google ADK trip-planning agent. It asks for the missing trip details, writes a
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install "google-adk>=1.18" "google-cloud-aiplatform[agent-engines]>=1.148.1,<2"
+pip install "google-adk[mcp]>=1.18" "google-cloud-aiplatform[agent-engines]>=1.148.1,<2"
 cp .env.example .env
 ```
 
