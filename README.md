@@ -62,3 +62,39 @@ python -m memory_bank list --user-id user
 ```
 
 `create` prints the id to put in `AGENT_ENGINE_ID`. Topics used when the bank is created are `stay_preference` and `trip_context`. Scope is `app_name=travel_agent` plus `user_id`.
+
+`memory_bank_codelab.ipynb` walks through the same steps cell by cell, and also creates a bank with a structured profile schema.
+
+## Run the agent with Memory Bank
+
+Point `adk web` at the bank so `save_to_memory` and `PreloadMemoryTool` use it instead of the in-memory store. The agent code does not change.
+
+`.env` needs the bank id and the project for the memory service:
+
+```
+GOOGLE_API_KEY=your-key
+GOOGLE_CLOUD_PROJECT=your-project-id
+GOOGLE_CLOUD_LOCATION=us-central1
+AGENT_ENGINE_ID=your-engine-id
+```
+
+Sign in once with Application Default Credentials, then start the Web UI:
+
+```bash
+gcloud auth application-default login
+set -a; source .env; set +a
+export AGENT_ENGINE_ID=7301933960752267264
+adk web --memory_service_uri="agentengine://${AGENT_ENGINE_ID}"
+```
+
+`export AGENT_ENGINE_ID=...` sets the bank id for this terminal, so it works even if `.env` doesn't have it yet. Replace the number with your own bank id.
+
+Pick `travel_agent` and keep the User ID as `user`, so the scope matches what the CLI and the notebook write.
+
+To check that it works:
+
+1. In one session, say something that fits a topic, for example "I'd like a non-smoking room and I'm bringing my dog."
+2. Wait a few seconds, then run `python -m memory_bank list --user-id user`. The new memory should be listed.
+3. Start a new session and ask for a hotel. The agent should mention the non-smoking room and the dog.
+
+If you see `RefreshError: invalid_grant`, run `gcloud auth application-default login` again.
