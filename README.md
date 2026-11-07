@@ -1,5 +1,7 @@
 # Travel agent
 
+![Connect, Remember, Personalize: Building AI Agents with ADK and Memory Bank](images/title.png)
+
 A Google ADK trip-planning agent. It asks for the missing trip details, writes an itinerary and food plan, then saves a cartoon poster as a session artifact.
 
 ## Setup

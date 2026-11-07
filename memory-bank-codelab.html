@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Travel Agent Memory Codelab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: codelab — app bar on top, step drawer on the left, one step per card, Back/Next pinned to the bottom.
+   Colors: the four Google brand colors. Blue = actions and ADK sessions, yellow = written facts, green = Memory Bank, red = warnings. */
+:root {
+  --blue: #4285f4;
+  --blue-dark: #1a73e8;
+  --red: #ea4335;
+  --yellow: #fbbc04;
+  --green: #34a853;
+  --bg: #f8f9fa;
+  --surface: #ffffff;
+  --ink: #202124;
+  --muted: #5f6368;
+  --line: #dadce0;
+  --bar: #3c4043;
+  --code-bg: #f1f3f4;
+  --blue-soft: #e8f0fe;
+  --yellow-soft: #fef7e0;
+  --green-soft: #e6f4ea;
+  --red-soft: #fce8e6;
+  --font: "Google Sans", "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Roboto Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.6; }
+
+/* app bar */
+.appbar {
+  position: sticky; top: 0; z-index: 5; background: var(--bar); color: #fff;
+  display: flex; align-items: center; gap: 14px; height: 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.appbar .menu { display: none; background: none; border: 0; color: #fff; font-size: 22px; cursor: pointer; padding: 6px; }
+.appbar .mark { display: flex; gap: 3px; flex: none; }
+.appbar .mark i { width: 8px; height: 22px; border-radius: 4px; display: block; }
+.appbar h1 { font-size: 20px; font-weight: 400; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.progress { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--yellow); width: 0; transition: width .25s; }
+
+.layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); min-height: calc(100% - 64px); }
+
+/* drawer */
+.drawer { background: var(--surface); border-right: 1px solid var(--line); padding: 16px 0 96px; }
+.drawer ol { list-style: none; margin: 0; padding: 0; }
+.drawer a {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 14px; align-items: center;
+  padding: 10px 20px; color: var(--ink); text-decoration: none; font-size: 14px; line-height: 1.35;
+  border-left: 4px solid transparent;
+}
+.drawer a:hover { background: var(--bg); }
+.drawer .n {
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--surface); border: 1px solid var(--line); color: var(--muted); font-size: 13px; font-weight: 500;
+}
+.drawer a.done .n { background: var(--green); border-color: var(--green); color: #fff; }
+.drawer a[aria-current="step"] { background: var(--blue-soft); border-left-color: var(--blue-dark); font-weight: 500; }
+.drawer a[aria-current="step"] .n { background: var(--blue-dark); border-color: var(--blue-dark); color: #fff; }
+.drawer .total { padding: 16px 24px 0; font-size: 13px; color: var(--muted); }
+
+/* content */
+main { min-width: 0; padding: 32px max(16px, env(safe-area-inset-right, 0px)) 120px max(16px, env(safe-area-inset-left, 0px)); }
+.step { max-width: 820px; margin: 0 auto; background: var(--surface); border-radius: 8px; box-shadow: 0 1px 2px rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15); padding: 32px clamp(18px, 4vw, 48px) 36px; }
+.step h2 { font-size: 28px; font-weight: 400; line-height: 1.3; margin: 0 0 4px; text-wrap: balance; }
+.step .dur { font-size: 13px; color: var(--muted); margin-bottom: 24px; display: flex; gap: 6px; align-items: center; }
+.step .dur::before { content: ""; width: 12px; height: 12px; border: 2px solid var(--muted); border-radius: 50%; box-sizing: border-box; }
+.step h3 { font-size: 20px; font-weight: 500; margin: 32px 0 8px; color: var(--ink); }
+.step p, .step li { max-width: 70ch; }
+.step p { margin: 0 0 14px; }
+.step ul, .step ol { margin: 0 0 14px; padding-left: 24px; }
+.step li { margin-bottom: 6px; }
+code { font-family: var(--font-mono); font-size: .875em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; color: #37474f; overflow-wrap: anywhere; }
+a { color: var(--blue-dark); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--blue-dark); outline-offset: 2px; }
+
+.code { position: relative; margin: 10px 0 20px; background: var(--code-bg); border-radius: 4px; border-left: 4px solid var(--blue); }
+.code .file { font-family: var(--font-mono); font-size: 12px; color: var(--muted); padding: 10px 16px 0; }
+.code pre { margin: 0; padding: 12px 16px 16px; overflow-x: auto; font-family: var(--font-mono); font-size: 13.5px; line-height: 1.65; color: #202124; }
+.code pre .c { color: #80868b; }
+.code pre .k { color: #c5221f; }
+.code pre .s { color: #188038; }
+.code button {
+  position: absolute; top: 6px; right: 6px; font: 500 12px var(--font); color: var(--blue-dark);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 3px 10px; cursor: pointer;
+}
+
+.callout { border-radius: 4px; padding: 14px 18px; margin: 14px 0 20px; font-size: 15px; }
+.callout b { display: block; font-size: 14px; margin-bottom: 2px; }
+.callout p:last-child { margin-bottom: 0; }
+.callout.tip { background: var(--green-soft); }
+.callout.tip b { color: #137333; }
+.callout.info { background: var(--blue-soft); }
+.callout.info b { color: var(--blue-dark); }
+.callout.fact { background: var(--yellow-soft); }
+.callout.fact b { color: #b06000; }
+.callout.warn { background: var(--red-soft); }
+.callout.warn b { color: #c5221f; }
+
+/* two-path diagram */
+.paths { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 20px 0 24px; }
+@media (max-width: 640px) { .paths { grid-template-columns: minmax(0, 1fr); } }
+.path { border: 2px solid var(--yellow); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.path.s { border-color: var(--blue); }
+.path h4 { font-size: 17px; font-weight: 500; margin: 0; }
+.path .api { font-family: var(--font-mono); font-size: 13px; color: #b06000; }
+.path.s .api { color: var(--blue-dark); }
+.flow { display: flex; align-items: center; gap: 10px; }
+.dot { width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center; text-align: center; font-weight: 700; font-size: 14px; line-height: 1.15; flex: none; }
+.dot.f { background: var(--yellow); color: #202124; }
+.dot.se { background: var(--blue); color: #fff; }
+.dot.b { background: #fff; color: #137333; border: 3px solid var(--green); }
+.arrow { flex: 1; height: 2px; background: var(--muted); position: relative; min-width: 24px; }
+.arrow::after { content: ""; position: absolute; right: -1px; top: -5px; border-left: 9px solid var(--muted); border-top: 6px solid transparent; border-bottom: 6px solid transparent; }
+.path p { font-size: 14px; color: var(--muted); margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips span { font-size: 12.5px; padding: 2px 10px; border-radius: 99px; background: var(--blue-soft); color: var(--blue-dark); }
+
+.tablewrap { overflow-x: auto; margin: 10px 0 20px; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 500; color: var(--muted); font-size: 13px; background: var(--bg); }
+
+/* bottom nav */
+.nav {
+  position: fixed; left: 300px; right: 0; bottom: 0; z-index: 4; display: flex; justify-content: space-between; gap: 12px;
+  padding: 14px max(24px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(24px, env(safe-area-inset-left, 0px));
+  pointer-events: none;
+}
+.nav button {
+  pointer-events: auto; font: 500 14px var(--font); letter-spacing: .02em; padding: 10px 22px; border-radius: 4px; cursor: pointer;
+  border: 0; background: var(--surface); color: var(--blue-dark); box-shadow: 0 1px 3px rgba(60,64,67,.3), 0 4px 8px 3px rgba(60,64,67,.15);
+}
+.nav button.primary { background: var(--blue-dark); color: #fff; }
+.nav button[disabled] { visibility: hidden; }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .appbar .menu { display: block; }
+  .drawer { position: fixed; top: 64px; left: 0; bottom: 0; width: min(300px, 85vw); z-index: 6; overflow-y: auto; transform: translateX(-100%); transition: transform .2s; box-shadow: 2px 0 8px rgba(0,0,0,.2); }
+  .drawer.open { transform: none; }
+  .nav { left: 0; }
+  main { padding-top: 20px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <button class="menu" id="menu" type="button" aria-label="Show steps">☰</button>
+  <span class="mark" aria-hidden="true"><i style="background:var(--blue)"></i><i style="background:var(--red)"></i><i style="background:var(--yellow)"></i><i style="background:var(--green)"></i></span>
+  <h1>Give your ADK travel agent a memory with Vertex AI Memory Bank</h1>
+  <span class="progress" id="progress"></span>
+</header>
+
+<div class="layout">
+  <nav class="drawer" id="drawer">
+    <ol id="steps"></ol>
+    <div class="total" id="total"></div>
+  </nav>
+
+  <main id="main">
+
+<!-- 1 -->
+<section class="step" data-step="overview" data-title="Overview" data-min="3">
+  <h2>Overview</h2><div class="dur">3 min</div>
+  <p>In this codelab you connect a <strong>trip-planning agent</strong> built with the Agent Development Kit (ADK) to <strong>Vertex AI Memory Bank</strong>, so the agent remembers guests across sessions. For example, it remembers that a guest travels with a dog named Oreo.</p>
+  <p>There are two ways to put memories into a Memory Bank:</p>
+  <div class="paths">
+    <div class="path">
+      <h4>1. Write one fact directly</h4>
+      <span class="api">CreateMemory / generate</span>
+      <div class="flow"><div class="dot f">Fact</div><div class="arrow"></div><div class="dot b">Memory<br>Bank</div></div>
+      <p>Use when your app already knows something, for example from a booking form. No transcript needed.</p>
+    </div>
+    <div class="path s">
+      <h4>2. Archive a whole chat</h4>
+      <span class="api">add_session_to_memory</span>
+      <div class="flow"><div class="dot se">Session</div><div class="arrow"></div><div class="dot b">Memory<br>Bank</div></div>
+      <div class="chips"><span>Messages</span><span>Replies</span><span>Images</span><span>Video</span><span>Audio</span></div>
+    </div>
+  </div>
+  <p>Path 1 is our own helper code in <code>memory_bank/memories.py</code>. Path 2 is built into ADK, and the agent in <code>travel_agent/agent.py</code> calls it at the end of every turn. To read memories back, the agent uses <code>PreloadMemoryTool</code>, which searches memory before the model answers.</p>
+  <h3>What you'll build</h3>
+  <ul>
+    <li>Memory topics that decide what the bank remembers, and a Memory Bank that uses them</li>
+    <li>A CLI that writes facts directly with <code>memories.create</code>, plus a <code>memories.generate</code> variant</li>
+    <li>Reads with <code>list</code> and <code>retrieve</code></li>
+    <li>An ADK agent that archives whole sessions and recalls memories, backed by Memory Bank</li>
+  </ul>
+  <h3>What you'll need</h3>
+  <ul>
+    <li>A Google Cloud project with billing enabled</li>
+    <li>Python 3.12+, Node.js (for the Airbnb MCP server via <code>npx</code>), and the <code>gcloud</code> CLI</li>
+    <li>A Gemini API key</li>
+  </ul>
+  <h3>Project layout</h3>
+  <div class="code"><pre>memory-bank/
+├── memory_bank/          <span class="c"># Path 1: our helper + CLI</span>
+│   ├── memories.py       <span class="c"># create bank, add, list</span>
+│   └── __main__.py       <span class="c"># python -m memory_bank ...</span>
+├── travel_agent/         <span class="c"># Path 2: the ADK agent</span>
+│   ├── agent.py          <span class="c"># LlmAgent + PreloadMemoryTool + save_to_memory</span>
+│   ├── image.py          <span class="c"># trip poster tool</span>
+│   └── model_callbacks.py
+├── .env.example
+└── pyproject.toml</pre></div>
+</section>
+
+<!-- 2 -->
+<section class="step" data-step="setup" data-title="Set up your environment" data-min="5" hidden>
+  <h2>Set up your environment</h2><div class="dur">5 min</div>
+  <h3>Install packages</h3>
+  <div class="code"><pre>python3 -m venv .venv
+source .venv/bin/activate
+pip install "google-adk[mcp]>=1.18" "google-cloud-aiplatform[agent-engines]>=1.148.1,<2"</pre></div>
+  <h3>Sign in and enable the API</h3>
+  <div class="code"><pre>gcloud auth application-default login
+gcloud config set project YOUR_PROJECT_ID
+gcloud services enable aiplatform.googleapis.com</pre></div>
+  <h3>Configure .env</h3>
+  <div class="code"><div class="file">.env</div><pre><span class="c"># The agent's model (gemini-2.5-flash) uses an API key</span>
+GOOGLE_API_KEY=your-key
+
+<span class="c"># Memory Bank runs on Vertex AI</span>
+PROJECT_ID=your-project-id
+LOCATION=us-central1
+GOOGLE_CLOUD_PROJECT=your-project-id
+GOOGLE_CLOUD_LOCATION=us-central1
+
+<span class="c"># Fill in after step 3</span>
+AGENT_ENGINE_ID=</pre></div>
+  <div class="callout warn"><b>Watch out</b><p><code>memory_bank/memories.py</code> reads <code>AGENT_ENGINE_ID</code>. The current <code>.env.example</code> has <code>GOOGLE_CLOUD_AGENT_ENGINE_ID</code>, which the code doesn't use, so add <code>AGENT_ENGINE_ID</code> yourself.</p></div>
+</section>
+
+<!-- 3 -->
+<section class="step" data-step="create-bank" data-title="Memory topics and the Memory Bank" data-min="10" hidden>
+  <h2>Memory topics and the Memory Bank</h2><div class="dur">10 min</div>
+  <p>A Memory Bank lives inside an Agent Engine (reasoning engine). When you create it, you can tell it what to extract from conversations by defining <strong>memory topics</strong>.</p>
+
+  <h3>What is a memory topic?</h3>
+  <p>A memory topic tells Memory Bank <strong>what kind of information is worth remembering</strong>. When Memory Bank reads a conversation, a model extracts only the facts that fit a topic. Anything that fits no topic is dropped.</p>
+  <div class="tablewrap"><table>
+    <tr><th>Kind</th><th>What it is</th></tr>
+    <tr><td><code>custom_memory_topic</code></td><td>Your own topic: a <code>label</code> plus a <code>description</code>. This project uses these.</td></tr>
+    <tr><td><code>managed_memory_topic</code></td><td>Built-in topics from Google: <code>USER_PERSONAL_INFO</code>, <code>USER_PREFERENCES</code>, <code>KEY_CONVERSATION_DETAILS</code>, <code>EXPLICIT_INSTRUCTIONS</code>. Used by default when you set no topics.</td></tr>
+  </table></div>
+  <p>This project defines two custom topics for a hotel guest:</p>
+  <div class="tablewrap"><table>
+    <tr><th>Label</th><th>What it keeps</th><th>Example</th></tr>
+    <tr><td><code>stay_preference</code></td><td>Room, bed, smoking, pets, view, amenities, budget</td><td>Guest wants a non-smoking room and can bring a dog.</td></tr>
+    <tr><td><code>trip_context</code></td><td>Destination, dates, who's traveling, purpose, dietary or accessibility needs</td><td>Guest is traveling to Chiang Mai with a golden retriever named Max.</td></tr>
+  </table></div>
+  <div class="code"><div class="file">memory_bank/memories.py</div><pre><span class="k">def</span> travel_memory_topics():
+    types = vertexai.types
+    MemoryTopic = types.MemoryBankCustomizationConfigMemoryTopic
+    CustomMemoryTopic = types.MemoryBankCustomizationConfigMemoryTopicCustomMemoryTopic
+
+    <span class="k">return</span> [
+        MemoryTopic(
+            custom_memory_topic=CustomMemoryTopic(
+                label=<span class="s">"stay_preference"</span>,
+                description=<span class="s">"""Extract the guest's hotel and room preferences. Include:
+                - Room type (single, double, suite, connecting rooms)
+                - Smoking or non-smoking
+                - Pets (bringing a pet, type, size)
+                ...
+                Example: "Guest wants a non-smoking room and can bring a dog."
+                """</span>,
+            )
+        ),
+        MemoryTopic(
+            custom_memory_topic=CustomMemoryTopic(
+                label=<span class="s">"trip_context"</span>,
+                description=<span class="s">"""Extract the guest's trip context. ..."""</span>,
+            )
+        ),
+    ]</pre></div>
+  <div class="callout fact"><b>Write the description like a prompt</b><p>The <code>description</code> is the instruction the extraction model reads. List what to include and add one or two <code>Example:</code> lines in the style you want stored. Clearer descriptions give more consistent memories.</p></div>
+  <h3>When topics apply</h3>
+  <div class="tablewrap"><table>
+    <tr><th>Write path</th><th>Uses topics?</th></tr>
+    <tr><td><code>add_session_to_memory</code> (ADK, path 2)</td><td>Yes, facts are extracted from the chat</td></tr>
+    <tr><td><code>memories.generate</code></td><td>Yes</td></tr>
+    <tr><td><code>memories.create</code> (<code>custom_add</code>, path 1)</td><td>No, the fact is stored as given</td></tr>
+  </table></div>
+  <p>For example, if a guest types “I'd like a non-smoking room, and I love really spicy food,” Memory Bank keeps “Guest wants a non-smoking room.” The spicy food fits neither topic, so it's dropped. To keep it, add a topic such as <code>food_preference</code>.</p>
+
+  <h3>Create the bank with the topics</h3>
+  <p>The topics go into the bank's config when it's created:</p>
+  <div class="code"><div class="file">memory_bank/memories.py</div><pre><span class="k">def</span> create_memory_bank(display_name=<span class="s">"travel-agent-memory"</span>) -> str:
+    client = get_client()   <span class="c"># vertexai.Client(project, location)</span>
+    engine = client.agent_engines.create(
+        config={
+            <span class="s">"display_name"</span>: display_name,
+            <span class="s">"context_spec"</span>: {
+                <span class="s">"memory_bank_config"</span>: {
+                    <span class="s">"customization_configs"</span>: [
+                        vertexai.types.MemoryBankCustomizationConfig(
+                            memory_topics=travel_memory_topics(),
+                        )
+                    ],
+                }
+            },
+        },
+    )
+    <span class="k">return</span> engine.api_resource.name</pre></div>
+  <h3>Run it</h3>
+  <div class="code"><pre>python -m memory_bank create</pre></div>
+  <p>After a short wait you'll see something like:</p>
+  <div class="code"><pre>projects/123456/locations/us-central1/reasoningEngines/987654321
+Set AGENT_ENGINE_ID to: 987654321</pre></div>
+  <p>Put the last number in <code>AGENT_ENGINE_ID</code> in <code>.env</code>. <code>memory_bank_name()</code> builds the full resource name for you. You can also paste the full <code>projects/...</code> name.</p>
+  <div class="callout warn"><b>Topics belong to the bank</b><p>Topics are saved with the bank when it's created. Changing <code>travel_memory_topics()</code> later doesn't change a bank that already exists. Update that bank's config or create a new bank.</p></div>
+  <div class="callout tip"><b>Scope</b><p>Every memory belongs to a scope. Here the scope is <code>{"app_name": "travel_agent", "user_id": ...}</code>, the same keys ADK uses when it searches. If any scope key doesn't match, the agent can't see the memory.</p></div>
+</section>
+
+<!-- 4 -->
+<section class="step" data-step="write-fact" data-title="Path 1: Write a fact directly" data-min="10" hidden>
+  <h2>Path 1: Write a fact directly</h2><div class="dur">10 min</div>
+  <p>Use this when your app already knows something, for example the guest ticked “bringing a pet” on a booking form. The guest doesn't have to tell the agent.</p>
+  <h3>CreateMemory: store the text exactly</h3>
+  <div class="code"><div class="file">memory_bank/memories.py</div><pre><span class="k">def</span> custom_add(fact: str, user_id: str, app_name: str = <span class="s">"travel_agent"</span>):
+    text = fact.strip()
+    <span class="k">if not</span> text:
+        <span class="k">raise</span> ValueError(<span class="s">"fact must not be empty"</span>)
+
+    client = get_client()
+    <span class="k">return</span> client.agent_engines.memories.create(
+        name=memory_bank_name(),
+        fact=text,
+        scope={<span class="s">"app_name"</span>: app_name, <span class="s">"user_id"</span>: user_id},
+        config={<span class="s">"wait_for_completion"</span>: True},
+    )</pre></div>
+  <div class="code"><pre>python -m memory_bank add --user-id user --fact "Guest is traveling with a dog named Oreo."</pre></div>
+  <p>The CLI prints the fact and the new memory's resource name. <code>create</code> doesn't merge with existing memories, so running it twice with the same text gives you two entries.</p>
+
+  <h3>generate: merge with what's already there</h3>
+  <p>To have a new fact <em>consolidated</em> with existing memories (for example, updating “one dog named Oreo” to “two dogs”), send it through <code>generate</code> with <code>direct_memories_source</code>. This function isn't in the repo yet. Add it as an exercise.</p>
+  <div class="code"><div class="file">memory_bank/memories.py (add this)</div><pre><span class="k">def</span> generate_fact(fact: str, user_id: str, app_name: str = <span class="s">"travel_agent"</span>):
+    <span class="s">"""Send a fact through generation so it is merged with existing memories."""</span>
+    client = get_client()
+    <span class="k">return</span> client.agent_engines.memories.generate(
+        name=memory_bank_name(),
+        direct_memories_source={<span class="s">"direct_memories"</span>: [{<span class="s">"fact"</span>: fact.strip()}]},
+        scope=_scope(user_id, app_name),
+        config={<span class="s">"wait_for_completion"</span>: True},
+    )</pre></div>
+  <div class="tablewrap"><table>
+    <tr><th></th><th><code>memories.create</code></th><th><code>memories.generate</code> (direct)</th></tr>
+    <tr><td>Stored word for word</td><td>Yes</td><td>May be rephrased</td></tr>
+    <tr><td>Merged with existing memories</td><td>No</td><td>Yes, can update or remove old ones</td></tr>
+    <tr><td>Good for</td><td>System data that must stay exact</td><td>Data that may repeat or contradict older memories</td></tr>
+  </table></div>
+</section>
+
+<!-- 5 -->
+<section class="step" data-step="read" data-title="Read memories back" data-min="5" hidden>
+  <h2>Read memories back</h2><div class="dur">5 min</div>
+  <p><code>list_memories</code> picks the API based on whether you pass a <code>user_id</code>:</p>
+  <div class="code"><div class="file">memory_bank/memories.py</div><pre><span class="k">def</span> list_memories(user_id=None, app_name=<span class="s">"travel_agent"</span>) -> list:
+    client = get_client()
+    name = memory_bank_name()
+    <span class="k">if</span> user_id:
+        <span class="c"># RetrieveMemories: every scope key must match</span>
+        <span class="k">return</span> list(client.agent_engines.memories.retrieve(
+            name=name, scope=_scope(user_id, app_name),
+        ))
+    <span class="c"># ListMemories: every memory in the bank</span>
+    <span class="k">return</span> list(client.agent_engines.memories.list(name=name))</pre></div>
+  <div class="code"><pre>python -m memory_bank list --user-id user
+python -m memory_bank list          <span class="c"># all users</span></pre></div>
+  <div class="code"><pre>1. Guest is traveling with a dog named Oreo.
+   projects/.../reasoningEngines/987654321/memories/1122334455</pre></div>
+  <h3>Similarity search</h3>
+  <p>Add <code>similarity_search_params</code> to get only the memories closest to a query. ADK searches this way while the agent runs (step 6).</p>
+  <div class="code"><pre>client.agent_engines.memories.retrieve(
+    name=memory_bank_name(),
+    scope={<span class="s">"app_name"</span>: <span class="s">"travel_agent"</span>, <span class="s">"user_id"</span>: <span class="s">"user"</span>},
+    similarity_search_params={<span class="s">"search_query"</span>: <span class="s">"pets"</span>, <span class="s">"top_k"</span>: 3},
+)</pre></div>
+  <p><code>memory_fact()</code> and <code>memory_resource_name()</code> unwrap the returned objects, whether they come from <code>create</code>, <code>list</code>, or <code>retrieve</code>.</p>
+</section>
+
+<!-- 6 -->
+<section class="step" data-step="adk-session" data-title="Path 2: Archive a whole chat with ADK" data-min="10" hidden>
+  <h2>Path 2: Archive a whole chat with ADK</h2><div class="dur">10 min</div>
+  <p>Two parts of the agent deal with memory:</p>
+  <div class="code"><div class="file">travel_agent/agent.py</div><pre><span class="k">from</span> google.adk.tools.preload_memory_tool <span class="k">import</span> PreloadMemoryTool
+
+<span class="c"># Write: after every turn, send the whole session to the memory service</span>
+<span class="k">async def</span> save_to_memory(callback_context):
+    ctx = callback_context._invocation_context
+    <span class="k">await</span> ctx.memory_service.add_session_to_memory(ctx.session)
+
+root_agent = LlmAgent(
+    name=<span class="s">"hotel_agent"</span>,
+    model=<span class="s">"gemini-2.5-flash"</span>,
+    instruction=<span class="s">"... Use what you remember about the guest ..."</span>,
+    tools=[
+        PreloadMemoryTool(),          <span class="c"># Read: search memory before the model answers</span>
+        generate_trip_image,
+        airbnb_search_mcp_toolset,
+    ],
+    before_model_callback=before_model_modifier,
+    after_agent_callback=save_to_memory,
+)</pre></div>
+  <div class="callout info"><b>add_session_to_memory</b><p>Sends every event in the session (guest messages, agent replies, uploaded images) to Memory Bank. Memory Bank extracts facts using the topics from step 3 and merges them with that user's existing memories.</p></div>
+  <div class="callout fact"><b>PreloadMemoryTool</b><p>The model doesn't have to choose to call it. On every turn it searches memory with the guest's latest message and adds the results to the system instruction before the model answers.</p></div>
+  <h3>When to save</h3>
+  <ul>
+    <li><strong>Every turn</strong> (what this repo does): memory stays current, but the whole session is sent again each time.</li>
+    <li><strong>At the end of a session</strong>: call <code>add_session_to_memory</code> once from the code that closes the session. Cheaper, but a guest who opens a new chat before the old one closes won't see those memories yet.</li>
+  </ul>
+  <div class="callout warn"><b>Not on Memory Bank yet, so no topics</b><p>A plain <code>adk web</code> uses <code>InMemoryMemoryService</code>. It copies the raw events into RAM with no extraction, so your memory topics aren't used. Search only matches shared keywords, and everything is wiped when the process stops. The next step switches it to Memory Bank.</p></div>
+</section>
+
+<!-- 7 -->
+<section class="step" data-step="connect" data-title="Connect ADK to Memory Bank" data-min="5" hidden>
+  <h2>Connect ADK to Memory Bank</h2><div class="dur">5 min</div>
+  <p>The agent code doesn't change, because it already calls <code>ctx.memory_service</code>. You only change which memory service ADK creates.</p>
+  <h3>With adk web</h3>
+  <div class="code"><pre>set -a; source .env; set +a      <span class="c"># put GOOGLE_CLOUD_PROJECT / LOCATION in the environment</span>
+adk web --memory_service_uri="agentengine://${AGENT_ENGINE_ID}"</pre></div>
+  <p>ADK creates a <code>VertexAiMemoryBankService</code> using the project and location from <code>GOOGLE_CLOUD_PROJECT</code> and <code>GOOGLE_CLOUD_LOCATION</code>.</p>
+  <div class="callout info"><b>Where the topics come from</b><p>ADK doesn't send memory topics. Memory Bank uses the topics saved on the bank that <code>AGENT_ENGINE_ID</code> points to. Point it at the bank you created in step 3. A bank created without topics falls back to the managed default topics.</p></div>
+  <h3>With your own Runner</h3>
+  <div class="code"><div class="file">run_local.py (example)</div><pre><span class="k">from</span> google.adk.memory <span class="k">import</span> VertexAiMemoryBankService
+<span class="k">from</span> google.adk.runners <span class="k">import</span> Runner
+<span class="k">from</span> google.adk.sessions <span class="k">import</span> InMemorySessionService
+
+<span class="k">from</span> travel_agent <span class="k">import</span> root_agent
+
+memory_service = VertexAiMemoryBankService(
+    project=<span class="s">"your-project-id"</span>,
+    location=<span class="s">"us-central1"</span>,
+    agent_engine_id=<span class="s">"987654321"</span>,
+)
+runner = Runner(
+    agent=root_agent,
+    app_name=<span class="s">"travel_agent"</span>,          <span class="c"># must match the scope the CLI uses</span>
+    session_service=InMemorySessionService(),
+    memory_service=memory_service,
+)</pre></div>
+  <div class="callout tip"><b>Why the scopes line up</b><p>ADK sends <code>{"app_name": ..., "user_id": ...}</code> as the scope. In <code>adk web</code> the app name is the folder name <code>travel_agent</code> and the user ID is <code>user</code>, the same defaults as <code>python -m memory_bank add --user-id user</code>. Facts written in step 4 show up for the agent right away.</p></div>
+</section>
+
+<!-- 8 -->
+<section class="step" data-step="test" data-title="Test across sessions" data-min="5" hidden>
+  <h2>Test across sessions</h2><div class="dur">5 min</div>
+  <h3>Test path 1</h3>
+  <ol>
+    <li>Write a fact with the CLI from step 4, if you haven't already.</li>
+    <li>Start <code>adk web</code> with <code>--memory_service_uri</code> and pick <code>travel_agent</code>.</li>
+    <li>Start a new session and type “Find me a place to stay in Chiang Mai for 3 nights.”</li>
+    <li>The agent should ask about, or filter for, pet-friendly stays, because it sees the memory about Oreo.</li>
+  </ol>
+  <h3>Test path 2</h3>
+  <ol>
+    <li>In session A, type “I'd like a quiet, non-smoking room on a high floor.”</li>
+    <li>Wait a moment. Memory generation runs in the background.</li>
+    <li>Check with the CLI:</li>
+  </ol>
+  <div class="code"><pre>python -m memory_bank list --user-id user</pre></div>
+  <div class="code"><pre>1. Guest is traveling with a dog named Oreo.
+2. Guest prefers a non-smoking room on a quiet high floor.</pre></div>
+  <ol start="4">
+    <li>In a new session B, type “Plan a trip to Bangkok for me.” The agent should use both the room preference and the dog.</li>
+  </ol>
+  <h3>Test the memory topics</h3>
+  <ol>
+    <li>In a new session, type “I'd like a non-smoking room, and I love really spicy food.”</li>
+    <li>Wait a moment, then run <code>python -m memory_bank list --user-id user</code>.</li>
+    <li>You should see the non-smoking room but nothing about spicy food. That means the custom topics are filtering what gets stored.</li>
+  </ol>
+  <div class="callout warn"><b>No memories showing up?</b><p>Check three things: <code>adk web</code> was started with <code>--memory_service_uri</code>, the User ID in the Web UI is <code>user</code>, and the <code>app_name</code> you wrote with is <code>travel_agent</code>.</p></div>
+</section>
+
+<!-- 9 -->
+<section class="step" data-step="recap" data-title="Congratulations" data-min="2" hidden>
+  <h2>Congratulations</h2><div class="dur">2 min</div>
+  <p>Your agent now remembers guests from two sources: facts your app writes directly (path 1) and what guests say in chat (path 2). Both live in the same scope.</p>
+  <div class="tablewrap"><table>
+    <tr><th>Task</th><th>API</th><th>Where</th></tr>
+    <tr><td>Decide what to remember</td><td><code>MemoryTopic</code> (custom / managed)</td><td><code>travel_memory_topics()</code></td></tr>
+    <tr><td>Create bank + topics</td><td><code>agent_engines.create</code></td><td><code>memories.py</code> · <code>python -m memory_bank create</code></td></tr>
+    <tr><td>Write a fact exactly</td><td><code>memories.create</code></td><td><code>custom_add</code> · <code>python -m memory_bank add</code></td></tr>
+    <tr><td>Write a fact and merge</td><td><code>memories.generate</code> (direct)</td><td>Exercise in step 4</td></tr>
+    <tr><td>Read</td><td><code>memories.retrieve</code> / <code>list</code></td><td><code>list_memories</code> · <code>python -m memory_bank list</code></td></tr>
+    <tr><td>Archive a whole chat</td><td><code>add_session_to_memory</code></td><td><code>save_to_memory</code> in <code>agent.py</code></td></tr>
+    <tr><td>Let the agent see memories</td><td><code>PreloadMemoryTool</code></td><td><code>tools=[...]</code> in <code>agent.py</code></td></tr>
+    <tr><td>Connect ADK to the bank</td><td><code>agentengine://ID</code></td><td><code>adk web --memory_service_uri</code></td></tr>
+  </table></div>
+  <h3>Try next</h3>
+  <ul>
+    <li>Add a <code>generate</code> subcommand to <code>__main__.py</code> using <code>generate_fact</code> from step 4.</li>
+    <li>Add a new topic such as <code>food_preference</code> and create a new bank.</li>
+    <li>Move <code>save_to_memory</code> to the end of the session instead of every turn, and compare.</li>
+    <li>Upload a photo of a pet in chat and see what Memory Bank extracts from it.</li>
+  </ul>
+</section>
+
+  </main>
+</div>
+
+<div class="nav">
+  <button id="prev" type="button">Back</button>
+  <button id="next" type="button" class="primary">Next</button>
+</div>
+
+<script>
+(function () {
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.step'));
+  var list = document.getElementById('steps');
+  var progress = document.getElementById('progress');
+  var prev = document.getElementById('prev');
+  var next = document.getElementById('next');
+  var drawer = document.getElementById('drawer');
+  var seen = {};
+  try { seen = JSON.parse(localStorage.getItem('mb-codelab-seen') || '{}'); } catch (e) {}
+
+  var total = 0;
+  sections.forEach(function (s, i) {
+    total += +s.dataset.min;
+    var li = document.createElement('li');
+    var a = document.createElement('a');
+    a.href = '#' + s.dataset.step;
+    a.innerHTML = '<span class="n">' + (i + 1) + '</span><span class="l"></span>';
+    a.querySelector('.l').textContent = s.dataset.title;
+    a.addEventListener('click', function () { drawer.classList.remove('open'); });
+    li.appendChild(a);
+    list.appendChild(li);
+  });
+  document.getElementById('total').textContent = 'About ' + total + ' min';
+  var links = Array.prototype.slice.call(list.querySelectorAll('a'));
+
+  function current() {
+    var id = location.hash.replace('#', '');
+    for (var i = 0; i < sections.length; i++) if (sections[i].dataset.step === id) return i;
+    return 0;
+  }
+  function show(i, scroll) {
+    sections.forEach(function (s, j) { s.hidden = j !== i; });
+    seen[sections[i].dataset.step] = 1;
+    try { localStorage.setItem('mb-codelab-seen', JSON.stringify(seen)); } catch (e) {}
+    links.forEach(function (a, j) {
+      if (j === i) a.setAttribute('aria-current', 'step'); else a.removeAttribute('aria-current');
+      a.classList.toggle('done', j !== i && !!seen[sections[j].dataset.step]);
+    });
+    progress.style.width = ((i + 1) / sections.length * 100) + '%';
+    prev.disabled = i === 0;
+    next.disabled = i === sections.length - 1;
+    if (scroll) window.scrollTo(0, 0);
+  }
+  function go(i) { location.hash = sections[i].dataset.step; }
+  prev.addEventListener('click', function () { go(Math.max(0, current() - 1)); });
+  next.addEventListener('click', function () { go(Math.min(sections.length - 1, current() + 1)); });
+  document.getElementById('menu').addEventListener('click', function () { drawer.classList.toggle('open'); });
+  window.addEventListener('hashchange', function () { show(current(), true); });
+  show(current(), false);
+
+  document.querySelectorAll('.code').forEach(function (block) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function () {
+      var text = block.querySelector('pre').innerText;
+      var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1400); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { selectPre(block); });
+      } else { selectPre(block); }
+    });
+    block.appendChild(btn);
+  });
+  function selectPre(block) {
+    var r = document.createRange();
+    r.selectNodeContents(block.querySelector('pre'));
+    var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  }
+})();
+</script>
+</body>
+</html>
